@@ -206,6 +206,8 @@ pub struct Session {
     /// Untouched Local records of folders not browsed for this many days are forgotten when the
     /// library opens (0 = never; persisted in prefs.json). See `cmd/browse.rs`.
     pub forget_local_days: u32,
+    /// Interface theme id (`dark`, `calm`; persisted in prefs.json).
+    pub theme: String,
 }
 
 impl Default for Session {
@@ -269,6 +271,7 @@ impl Session {
             cache_mb: 0,
             smart_previews_dir: None,
             forget_local_days: lightcraft_catalog::DEFAULT_FORGET_DAYS,
+            theme: String::new(),
         }
     }
 

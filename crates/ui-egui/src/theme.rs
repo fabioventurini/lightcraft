@@ -7,6 +7,34 @@ use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId,
 
 pub const FONT_SEMIBOLD: &str = "semibold";
 
+/// The interface themes. `Dark` is the reference app's look; `Calm` is a low-stimulation
+/// alternative for sustained use by neurodivergent people - see `docs/calm-theme.md`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ThemeKind {
+    #[default]
+    Dark,
+    Calm,
+}
+
+impl ThemeKind {
+    pub const ALL: [ThemeKind; 2] = [ThemeKind::Dark, ThemeKind::Calm];
+    pub fn label(self) -> &'static str {
+        match self {
+            ThemeKind::Dark => "Dark",
+            ThemeKind::Calm => "Calm (Low Stimulation)",
+        }
+    }
+    pub fn id(self) -> &'static str {
+        match self {
+            ThemeKind::Dark => "dark",
+            ThemeKind::Calm => "calm",
+        }
+    }
+    pub fn parse(s: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.id().eq_ignore_ascii_case(s) || k.label().eq_ignore_ascii_case(s))
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Tokens {
     /// Top bar, side panels, bottom bar, tool strip.
@@ -54,7 +82,13 @@ pub struct Tokens {
 
 impl Default for Tokens {
     fn default() -> Self {
-        Tokens {
+        Tokens::for_kind(ThemeKind::Dark)
+    }
+}
+
+impl Tokens {
+    pub fn for_kind(kind: ThemeKind) -> Self {
+        let dark = Tokens {
             chrome: Color32::from_rgb(0x2d, 0x2d, 0x2d),
             canvas: Color32::from_rgb(0x1c, 0x1c, 0x1c),
             grid_bg: Color32::from_rgb(0x0f, 0x0f, 0x0f),
@@ -90,11 +124,48 @@ impl Default for Tokens {
             slider_row_h: 45.0,
             section_h: 57.0,
             film_h: 142.0,
+        };
+        match kind {
+            ThemeKind::Dark => dark,
+            // Warm-neutral, single-accent, low-stimulation. Surfaces and text are the INT Digital
+            // design system's dark tokens; the greys carry a faint warm bias so nothing reads as
+            // glare. Only the accent is decorative. Reject and caution keep a hue because they
+            // are cues that must never be missed, and each is paired with a glyph elsewhere -
+            // colour is never the sole carrier. The mask overlay loses its alarm red.
+            ThemeKind::Calm => Tokens {
+                chrome: Color32::from_rgb(0x24, 0x24, 0x22),
+                canvas: Color32::from_rgb(0x1a, 0x1a, 0x19),
+                grid_bg: Color32::from_rgb(0x12, 0x12, 0x11),
+                cell: Color32::from_rgb(0x1a, 0x1a, 0x19),
+                cell_selected: Color32::from_rgb(0x2c, 0x2c, 0x2a),
+                divider: Color32::from_rgb(0x1a, 0x1a, 0x19),
+                inset: Color32::from_rgb(0x2c, 0x2c, 0x2a),
+                field: Color32::from_rgb(0x2c, 0x2c, 0x2a),
+                field_border: Color32::from_rgb(0x3a, 0x3a, 0x36),
+                button: Color32::from_rgb(0x2c, 0x2c, 0x2a),
+                button_border: Color32::from_rgb(0x4a, 0x4a, 0x45),
+                hover: Color32::from_rgb(0x32, 0x32, 0x2f),
+                pressed: Color32::from_rgb(0x3a, 0x3a, 0x36),
+                tool_active: Color32::from_rgb(0x3a, 0x3a, 0x36),
+                text: Color32::from_rgb(0xf2, 0xf1, 0xea),
+                text_label: Color32::from_rgb(0xb3, 0xb1, 0xa6),
+                text_dim: Color32::from_rgb(0x9a, 0x98, 0x8f),
+                text_disabled: Color32::from_rgb(0x7a, 0x78, 0x6f),
+                icon: Color32::from_rgb(0xc9, 0xc7, 0xbc),
+                track: Color32::from_rgb(0x4a, 0x4a, 0x45),
+                thumb: Color32::from_rgb(0xb3, 0xb1, 0xa6),
+                thumb_hover: Color32::from_rgb(0xf2, 0xf1, 0xea),
+                accent: Color32::from_rgb(0x85, 0xb7, 0xeb),
+                star: Color32::from_rgb(0xe0, 0xa9, 0x4a),
+                pick: Color32::from_rgb(0xf2, 0xf1, 0xea),
+                reject: Color32::from_rgb(0xd9, 0x73, 0x5e),
+                caution: Color32::from_rgb(0xe0, 0xa9, 0x4a),
+                mask_overlay: Color32::from_rgba_unmultiplied(0x85, 0xb7, 0xeb, 96),
+                ..dark
+            },
         }
     }
-}
 
-impl Tokens {
     pub fn get(ctx: &egui::Context) -> Tokens {
         ctx.data(|d| d.get_temp::<Tokens>(egui::Id::NULL)).unwrap_or_default()
     }
@@ -160,8 +231,8 @@ fn craft_font_name(f: &lightcraft_engine::CraftFont) -> String {
     format!("craft-fonts {} {}", f.family, f.style)
 }
 
-pub fn apply(ctx: &egui::Context) {
-    let t = Tokens::default();
+pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
+    let t = Tokens::for_kind(kind);
     ctx.data_mut(|d| d.insert_temp(egui::Id::NULL, t));
     let mut v = Visuals::dark();
     v.panel_fill = t.chrome;
@@ -201,5 +272,13 @@ pub fn apply(ctx: &egui::Context) {
         s.text_styles.insert(egui::TextStyle::Small, FontId::proportional(11.0));
         s.text_styles.insert(egui::TextStyle::Heading, FontId::new(16.0, FontFamily::Name(FONT_SEMIBOLD.into())));
         s.animation_time = 0.08;
+        if kind == ThemeKind::Calm {
+            // Low-stimulation metrics: bigger targets, more air between rows, and animation
+            // slow enough to read rather than flick.
+            s.spacing.item_spacing = egui::vec2(8.0, 6.0);
+            s.spacing.button_padding = egui::vec2(10.0, 5.0);
+            s.spacing.interact_size.y = 26.0;
+            s.animation_time = 0.14;
+        }
     });
 }

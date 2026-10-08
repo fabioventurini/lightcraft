@@ -123,6 +123,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "---",
             "view.leftPanel",
             "view.photoCounts",
+            "@Interface Theme",
             "view.faceBoxes",
             "view.filmstrip",
             "view.histogram",
@@ -443,6 +444,13 @@ fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>> {
             }
             v.push(item("dialog.labelNames", Value::Null, "Edit Label Names…", None, true, None));
             v
+        }
+        "Interface Theme" => {
+            let cur = crate::theme::ThemeKind::parse(&app.session.theme).unwrap_or_default();
+            crate::theme::ThemeKind::ALL
+                .into_iter()
+                .map(|k| item("view.theme", json!({"theme": k.id()}), k.label(), None, true, Some(k == cur)))
+                .collect()
         }
         "Grid Info" => ["filename", "exposure", "date"]
             .into_iter()

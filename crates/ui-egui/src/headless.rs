@@ -48,7 +48,7 @@ impl HeadlessView {
     pub fn new() -> Self {
         let ctx = egui::Context::default();
         crate::theme::install_fonts(&ctx);
-        crate::theme::apply(&ctx);
+        crate::theme::apply(&ctx, crate::theme::ThemeKind::default());
         HeadlessView { ctx, textures: TextureStore::default(), shapes: vec![], pixels_per_point: 1.0, size: egui::vec2(1600.0, 1000.0), frames: 0 }
     }
 

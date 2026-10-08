@@ -122,6 +122,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("dialog.newFolder", "New Folder…", Some("Cmd+Shift+N"), "File"),
     ("dialog.smartAlbum", "New Smart Album…", None, "File"),
     ("view.photoCounts", "Show Photo Counts", None, "View"),
+    ("view.theme", "Interface Theme", None, ""),
     ("view.slideshow", "Slideshow", Some("Cmd+Alt+Enter"), "View"),
     ("view.secondWindow", "Second Window", Some("Cmd+F11"), "Window"),
     ("tool.keywordPainter", "Keyword Painter", None, ""),
@@ -281,6 +282,21 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
         "view.secondWindow" => {
             app.ui.second_window = p.get("show").and_then(Value::as_bool).unwrap_or(!app.ui.second_window);
             Ok(json!({"show": app.ui.second_window}))
+        }
+        "view.theme" => {
+            // Switching re-runs theme::apply on the next frame (the `styled` latch is dropped).
+            let kind = p
+                .get("theme")
+                .and_then(Value::as_str)
+                .and_then(crate::theme::ThemeKind::parse)
+                .unwrap_or_else(|| match crate::theme::ThemeKind::parse(&app.session.theme).unwrap_or_default() {
+                    crate::theme::ThemeKind::Dark => crate::theme::ThemeKind::Calm,
+                    crate::theme::ThemeKind::Calm => crate::theme::ThemeKind::Dark,
+                });
+            app.session.theme = kind.id().to_string();
+            app.styled = false;
+            let _ = app.session.save_prefs();
+            Ok(json!({"theme": kind.id()}))
         }
         "view.photoCounts" => {
             app.ui.show_counts = p.get("show").and_then(Value::as_bool).unwrap_or(!app.ui.show_counts);

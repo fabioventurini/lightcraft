@@ -581,7 +581,7 @@ impl LightcraftApp {
     fn logic_inner(&mut self, ctx: &egui::Context) {
         if !self.styled {
             theme::install_fonts(ctx);
-            theme::apply(ctx);
+            theme::apply(ctx, theme::ThemeKind::parse(&self.session.theme).unwrap_or_default());
             // File → Add from Device lists cards scanned in the background: show hot-plugs
             let repaint = ctx.clone();
             lightcraft_engine::devices::on_change(move || repaint.request_repaint());
